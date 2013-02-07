@@ -1,0 +1,21 @@
+{
+  "name": "repl",
+  "version": "0.0.0",
+  "description": "repl ====",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/christkv/repl.git"
+  },
+  "dependencies": {
+      "mongodb": "latest"
+    , "exec-sync": "latest"
+  },
+  "author": "",
+  "license": "BSD",
+  "readmeFilename": "README.md",
+  "gitHead": "482845406fe069985937650a64026f7cd3fbfafa"
+}
