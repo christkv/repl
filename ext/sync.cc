@@ -113,7 +113,8 @@ Handle<Value> Sync::Execute(const Arguments &args) {
   _args[length] = func;
 
   // Call function
-  function->Call(v8::Context::GetCurrent()->Global(), length + 1, _args);
+  // function->Call(v8::Context::GetCurrent()->Global(), length + 1, _args);
+  function->Call(args[1]->ToObject(), length + 1, _args);
   // Retrieve the return value
   js_result = global->Get(String::New("return_value"));
 
