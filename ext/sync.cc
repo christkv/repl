@@ -78,49 +78,46 @@ Handle<Value> Sync::Execute(const Arguments &args) {
 
   if(args.Length() < 2) return VException("Function and context must be first two parameters");
   if(!args[0]->IsFunction()) return VException("First parameter must be a Function");
+  if(!args[1]->IsObject()) return VException("Second parameter must be a context object");
 
-  Handle<Object> _context = args[1]->ToObject();
-
+  // Our original function we are wrapping
   v8::Persistent<v8::Function> function;
   function = v8::Persistent<v8::Function>::New(Handle<Function>::Cast(args[0]));
 
-  // Create a new context.
-  Persistent<Context> context = Context::New();
-  Context::Scope context_scope(context);
-
-  Handle<v8::Object> global = context->Global();  
-
+  // The current global context
+  Handle<v8::Object> global = v8::Context::GetCurrent()->Global();  
+  // Compile the callback we will use
   Handle<String> source = String::New("var return_value = null; function my_callback(err, result) { return_value = {err: err, result: result }; }");
-  // printf("======================================== 3\n");
   Handle<Script> script = Script::Compile(source);
-  // printf("======================================== 4\n");
-  Handle<Value> result = script->Run();
-  context.Dispose();
-
-  // Handle<v8::Object> global = context->Global();
+  script->Run();
+  
+  // Used to reference the callback function
   Handle<v8::Value> value = global->Get(String::New("my_callback"));
   Handle<Function> func = v8::Handle<v8::Function>::Cast(value);
-  // v8::Persistent<v8::Function> func;
-  // func = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(value));
 
-  // Handle<Value> _args[2];
+  // Handles the js result from the callback
   Handle<Value> js_result;
-  // // int final_result;  
-  // printf("======================================== 2\n");
 
-  // _args[0] = v8::String::New("1");
-  // _args[1] = v8::String::New("1"); 
-  // js_result = func->Call(global, 2, _args); 
+  // Total number of additional function parameters
+  const int length = args.Length() - 2;
 
+  // Allocate the length of the argument
+  Handle<Value> *_args = new Handle<Value>[length];
 
-  Handle<Value> _args[1];
-  _args[0] = value;
-  _args[0] = func;
-  js_result = function->Call(global, 1, _args); 
-  // function->
-  
+  // Map the values (from 3rd argument one it's the parameters passed to the method)
+  for(int i = 0; i < length; i++) {
+    _args[i] = args[2 + i];
+  }
+
+  // Last parameter is the callback
+  _args[length] = func;
+
+  // Call function
+  function->Call(v8::Context::GetCurrent()->Global(), length + 1, _args);
+  // Retrieve the return value
   js_result = global->Get(String::New("return_value"));
 
+  // While we have not result let event loop run a step at a time
   while(js_result->IsNull()) {
     // Run event loop for a tick
     uv_run_once(uv_default_loop());    
@@ -128,84 +125,7 @@ Handle<Value> Sync::Execute(const Arguments &args) {
     js_result = global->Get(String::New("return_value"));
   }
 
-  // if(js_result->IsNull()) {
-  //   printf("======== is null\n");
-  //   // sleep(1);
-  //   // 
-  // }
-
-  // uv_run_once(uv_default_loop());
-
-  // js_result = global->Get(String::New("return_value"));
-
-  // if(js_result->IsNull()) {
-  //   printf("======== is null\n");
-  //   // sleep(1);
-  //   // 
-  // }
-
-  // pthread_yield_np();
-
-  // context->Get(String::New("return_value"));
-  // js_result = String::New
-
-  // node::MakeCallback(_context, "", int argc, v8::Handle<v8::Value> *argv)
-
-  // // Handle<Function> function = Handle<Function>::Cast(args[0]);
-  // v8::Persistent<v8::Function> function;
-  // function = v8::Persistent<v8::Function>::New(Handle<Function>::Cast(args[0]));
-
-  // Handle<Object> _context = args[1]->ToObject();
-  // // Handle<Object> command = args[2]->ToObject();
-  // printf("======================================== 0\n");
-  // // Create a new context.
-  // Persistent<Context> context = Context::New();
-  // printf("======================================== 1\n");
-  // // Enter the context
-  // Context::Scope context_scope(context);
-  // printf("======================================== 2\n");
-  // // We need to create a new callback handler that we will execute
-  // Handle<String> source = String::New("function callback(err, result) { return {err: err, result: result }; }");
-  // printf("======================================== 3\n");
-  // Handle<Script> script = Script::Compile(source);
-  // printf("======================================== 4\n");
-  // Handle<Value> result = script->Run();
-  // printf("======================================== 5\n");
-
-  // printf("======================================== 1\n");
-  // // Dispose of context
-  // context.Dispose();
-
-  // Handle<v8::Object> global = context->Global();
-  // Handle<v8::Value> value = global->Get(String::New("callback"));
-  // Handle<v8::Function> func = v8::Handle<v8::Function>::Cast(value);
-  // printf("======================================== 2\n");
-
-  // Handle<Value> _args[1];
-  // Handle<Value> js_result;
-
-  // // _args[0] = command;
-  // _args[1] = func;
-  // printf("======================================== 3\n");
-  // js_result = function->Call(_context, 1, _args);
-  // printf("======================================== 4\n");
-
-
-  // Handle<Value> _args[2];
-  // Handle<Value> js_result;
-  // int final_result;  
-  // printf("======================================== 2\n");
-
-  // _args[0] = v8::String::New("1");
-  // _args[1] = v8::String::New("1"); 
-  // js_result = func->Call(global, 2, _args); 
-
-  // String::AsciiValue ascii(js_result);
-  // // final_result = atoi(*ascii);
-  // // std::cout << ascii.length();
-  // printf("%s\n", *ascii);
-  // printf("======================================== 3\n");
-
+  // Close the scope and return the final result
   return scope.Close(js_result);
 }
 
