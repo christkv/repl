@@ -12,7 +12,10 @@
   },
   "dependencies": {
       "mongodb": "latest"
-    , "exec-sync": "latest"
+      , "sync": "latest"
+  },
+  "devDependencies": {
+    "nodeunit": "latest"
   },
   "author": "",
   "license": "BSD",
