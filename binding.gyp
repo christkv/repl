@@ -2,7 +2,7 @@
   'targets': [
     {
       'target_name': 'sync',
-      'sources': [ 'ext/sync.cc' ],
+      'sources': [ 'ext/ext.cc' ],
       'cflags!': [ '-fno-exceptions' ],
       'cflags_cc!': [ '-fno-exceptions' ],
       'conditions': [

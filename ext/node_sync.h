@@ -13,7 +13,7 @@ using namespace v8;
 using namespace node;
 
 //===========================================================================
-class Sync : public ObjectWrap {
+class NODE_EXTERN Sync : public ObjectWrap {
 public:    
   Sync();
   ~Sync() {}
@@ -30,13 +30,3 @@ private:
 };
 
 #endif  // SYNC_H_
-
-//===========================================================================
-// Exporting function
-extern "C" void init(Handle<Object> target)
-{
-  HandleScope scope;
-  Sync::Initialize(target);
-}
-
-NODE_MODULE(sync, Sync::Initialize);

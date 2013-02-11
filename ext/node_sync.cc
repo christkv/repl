@@ -32,7 +32,7 @@
 
 #include <pthread.h>
 
-#include "sync.h"
+#include "node_sync.h"
 #include <uv.h>
 
 using namespace v8;
@@ -130,4 +130,4 @@ Handle<Value> Sync::Execute(const Arguments &args) {
   return scope.Close(js_result);
 }
 
-
+NODE_MODULE(node_sync, Sync::Initialize);
