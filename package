@@ -1,8 +1,33 @@
+#!/usr/bin/env node
 var exec = require('child_process').exec
+  , spawn = require('child_process').spawn
   , format = require('util').format
   , fs = require('fs');
 
-function buildBundle(version, callback) {
+var opt = require('optimist'),
+    argv = opt
+    .options('help', {})
+    .argv;
+
+var HELP = ['usage: package [action]'
+          , ''
+          , 'Builds a mongo shell release.'
+          , ''
+          , 'actions:'
+          , '  all      <node-version>                 Build a release against specified node version, ex: package build v1.8.17'
+          , '  bundle   <node-version>                 Build a new mongo.js bundle and compile the mongo shell'
+          , ''
+          , 'options:'
+          , '  --help                                  Show help.'
+          , ''].join('\n');
+
+
+  // case 'bundle': bundle(); break;
+  // case 'compile': compile(); break;
+  // case 'clean': compile(); break;  
+  // case 'download': compile(); break;  
+
+function buildBundle(version, options, callback) {
   var file_name = format("output/node-%s/lib/mongo.js", version);
   var build_command = format("./tools/one/bin/onejs build package.json output/node-%s/lib/mongo.js", version);
   var third_party_file = format("output/node-%s/lib/_third_party_main.js", version);
@@ -10,6 +35,11 @@ function buildBundle(version, callback) {
   var node_gyp = format("output/node-%s/node.gyp", version);
   var node_file = format("output/node-%s/src/node.cc", version);
   var node_extensions = format("output/node-%s/src/node_extensions.h", version);
+
+  if(typeof options == 'function') {
+    callback = options;
+    options = {};
+  }
 
   exec(build_command, {}, function(error, stdout, stderr) {
     console.log(stdout)
@@ -19,6 +49,8 @@ function buildBundle(version, callback) {
     var file = fs.readFileSync(file_name, 'utf8');
     file = file.replace("require('../build/Release/sync')", "process.binding('sync')");
     fs.writeFileSync(file_name, file, 'utf8');
+
+    if(options.js_only) return callback();
 
     // Create the _third_party_main.js file
     fs.writeFileSync(third_party_file, "require('mongo');", 'utf8');
@@ -62,6 +94,30 @@ function buildBundle(version, callback) {
   });
 }
 
+function compileNode(version, callback) {
+  var final_file = format("cp output/node-%s/out/Release/node* ./build/mongo", version);
+  var dir = format("output/node-%s", version)
+
+  var make = spawn('make', ['-C', dir]);
+  make.stdout.on('data', function(data) {
+    console.log(data.toString());
+  })
+
+  make.stderr.on('data', function (data) {
+    console.log(data.toString());
+  });
+
+  make.on('exit', function() {
+    // Copy final binary to build directory
+    exec(final_file, {}, function(error, stdout, stderr) {
+      console.log(stdout)
+      console.log(stderr)
+
+      callback(null);
+    })
+  });
+}
+
 function createBuildDirectory(callback) {
   exec('rm -rf output', {}, function(error, stdout, stderr) {
     exec('mkdir output', {}, function(error, stdout, stderr) {
@@ -92,19 +148,44 @@ function checkoutNodeSource(version, callback) {
   });  
 }
 
-createBuildDirectory(function() {  
-  checkoutNodeSource("v0.8.19", function() {
-    buildBundle("v0.8.19", function() {
+function help(){
+  console.log(HELP);
+  process.exit(0);
+}
 
+function all() {
+  var version = argv._[1] || 'v0.8.19';
+
+  createBuildDirectory(function() {  
+    checkoutNodeSource(version, function() {
+      buildBundle(version, function() {
+        compileNode(version, function() {        
+        });
+      })
     })
   })
-})
+}
 
-// buildBundle("v0.8.19", function() {
+/**
+ * Only builds the mongo.js file again and the recompiles the mongo
+ */
+function bundle() {
+  var version = argv._[1] || 'v0.8.19';  
+  buildBundle(version, {js_only:true}, function() {
+    compileNode(version, function() {
+    });
+  });
+}
 
-// })
+var action = argv._[0];
 
-
-// buildBundle(function() {
-
-// });
+switch(action){
+  case 'all': all(); break;
+  case 'bundle': bundle(); break;
+  default:
+    if(argv.version){
+      version();
+    } else {
+      help();
+    }
+}

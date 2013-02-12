@@ -12,6 +12,7 @@
   },
   "dependencies": {
       "mongodb": "latest"
+    , "optimist":"0.x"
   },
   "devDependencies": {
     "nodeunit": "latest"
